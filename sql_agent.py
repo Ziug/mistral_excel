@@ -1,7 +1,8 @@
 import requests, re, io
 from typing import List
 import pandas as pd
-from db import conn, is_sql
+from db import conn
+import db
 from session import model, key
 
 
@@ -24,8 +25,9 @@ sys_msg = {'role':'system', 'content':
 
     ```sql
     [SQL query]
-    If for task completion several queries are required you put them is seperate ```sql blocks
-    If user query does not require any sql e.g. "привет" "как ты работаешь" then send first 5 rows of the table
+    If for task completion several queries are required you put them is seperate ```sql blocks.
+    If user query does not require any sql e.g. "привет" "как ты работаешь" then send first 5 rows of the table.
+    If user asks for general info about the table/column you give general statistics using SQL aggregate functions (like COUNT, MIN, MAX, AVG, etc) or first 50 rows
     You don't need to write any explanations and comments before and after the code, STRICTLY follow this rule:"""
     }
 
@@ -54,18 +56,19 @@ def parse_attachment(file_name: str, file_content: str) -> pd.DataFrame:
         else:
             raise ValueError(f"Неподдерживаемое расширение файла: {ext}")
 
-def generate_sql(message: str, file_name: str, file_content: str, table_name: str= 'data') -> str:
+def generate_sql(message: str, file_name: str, file_content: str, table_name: str = 'data') -> str:
     user_message = {
         'role': 'user',
         "content": message,
     }
     
-    if not is_sql:
+    if not db.is_sql:
         parse_attachment(file_name, file_content).to_sql(table_name, conn, index=False, if_exists='replace')
-    columns = parse_attachment(file_name, file_content).columns
+        db.columns = parse_attachment(file_name, file_content).columns
+        db.is_sql = True
     # columns = ['Partner','tenure']
     
-    sys_msg['content'] = sys_msg["content"].format(table_name=table_name, fields_description=columns)
+    sys_msg['content'] = sys_msg["content"].format(table_name=table_name, fields_description=db.columns)
     
     headers = {
             "Authorization": f"Bearer {key}",

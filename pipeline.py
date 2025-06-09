@@ -35,25 +35,6 @@ class Pipeline:
         cut = len(cleaned)//2
         return cleaned[:cut]
     
-    @staticmethod
-    def parse_attachment(file_name: str, file_content: str) -> pd.DataFrame:
-        ext = file_name.lower().split(".")[-1]
-        content_bytes = file_content.encode("latin1")
-
-        if ext in ["xlsx", "xls"]:
-            return pd.read_excel(io.BytesIO(content_bytes), engine="openpyxl")
-        elif ext == "csv":
-            return pd.read_csv(io.BytesIO(content_bytes))
-        else:
-            raise ValueError(f"Неподдерживаемое расширение файла: {ext}")
-
-    @staticmethod
-    def convert_excel_to_sqlite(file_name: str, file_content: bytes, table_name: str = "data") -> sqlite3.Connection:
-        df = Pipeline.parse_attachment(file_name, file_content.decode("latin1"))
-        # # conn = conn 
-        # df.to_sql(table_name, conn, index=False, if_exists='replace')
-        # return conn
-    
     def generate_answer(self, messages: List[dict]) -> str:        
         headers = {
             "Authorization": f"Bearer {self.valves.mistral_api_key}",
@@ -82,14 +63,6 @@ class Pipeline:
         if not attachments:
             return "Пожалуйста, прикрепите Excel-файл."
 
-        # file = attachments[0]
-        # file_name = file["file_name"]
-        # file_bytes = file["file_content"].encode("latin1")
-
-        # conn = self.convert_excel_to_sqlite(file_name, file_bytes)
-        # df = pd.read_sql("SELECT * FROM data LIMIT 1", conn)
-        # table_columns = df.columns.tolist()
-
         # Добавление системного сообщения и текущего вопроса в историю
         if not self.message_history:
             self.message_history.append({
@@ -112,10 +85,17 @@ class Pipeline:
         
         self.message_history.append(tools_response)
         
+        if len(self.message_history) == 6:
+            self.message_history.pop(2)
+        elif len(self.message_history) > 6:
+            self.message_history.pop(1)
+            self.message_history.pop(1)
+            self.message_history.pop(2)
+        
         answer = self.generate_answer(self.message_history)
         
         self.message_history.extend([{"role": "assistant", "content": answer}])
         for i in self.message_history:
             print(i)
         # conn.close()
-        return answer
+        # return answer
