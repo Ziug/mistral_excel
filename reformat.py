@@ -16,7 +16,7 @@ sys_msg = {'role':'system', 'content':
 }
 
 
-
+# Обращение к ИИ
 def reformat(message: str) -> str:
     user_message = {
         'role': 'user',
@@ -36,12 +36,15 @@ def reformat(message: str) -> str:
 
     response = requests.post("https://api.mistral.ai/v1/chat/completions", headers=headers, json=data)
 
-
+    # Если при генерации ответа был получен код ответа отличный от 200 (успешно), выводим сообщениес сервера
     if response.status_code != 200:
         raise Exception(f"Mistral API error: {response.status_code} - {response.text[:100]}")
     
     user_attachments = message.get("attachments", [])[0]
+    
     print('REFORMAT')
+    
+    # Обращение к SQL агенту, передаём переформатированный запрос юзера и данные о файле
     sql_res = sql_agent.generate_sql(response.json()["choices"][0]["message"]["content"].strip(), 
                            user_attachments["file_name"], user_attachments["file_content"])
     
