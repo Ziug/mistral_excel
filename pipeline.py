@@ -1,5 +1,5 @@
 """
-requirements: pandas, requests, sqlite3, pydantic
+requirements: pandas, requests, sqlite3, pydantic, dotenv
 """
 
 import reformat, session
