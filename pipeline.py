@@ -34,7 +34,7 @@ class Pipeline:
             "model": self.valves.mistral_api_model,
             "messages": messages,
             "temperature": 0.3
-        }
+        }        
 
         response = requests.post("https://api.mistral.ai/v1/chat/completions", headers=headers, json=data)
 
@@ -70,11 +70,14 @@ class Pipeline:
                 )
             })
 
-        # Кидаем сообщение от пользователя (текст + инфо о файле) агентам по переформатированию запроса и составлению SQL
-        tools_response = reformat.reformat(user_message)
 
-        # Добавление в историю сообщения от пользователя и результат обращений к агентам (SQL запросы и их результаты)
+        # Добавление в историю сообщения от пользователя 
         self.message_history.append({"role": "user", "content": question})
+        
+        # Кидаем сообщение от пользователя (текст + инфо о файле) агентам по переформатированию запроса и составлению SQL
+        tools_response = reformat.reformat(user_message, self.message_history)
+        
+        # Добавление результата обращений к агентам (SQL запросы и их результаты)
         self.message_history.append(tools_response)
         
         # Удаление старых записей из истории, кроме предыдущей
