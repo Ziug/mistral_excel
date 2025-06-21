@@ -3,18 +3,19 @@ import os
 from os.path import join, dirname
 from dotenv import load_dotenv
 
-dotenv_path = join(dirname(__file__), '.env')
+dotenv_path = join(dirname(__file__), ".env")
 load_dotenv(dotenv_path)
 
 key = os.environ.get("KEY")
-model = 'mistral-small-latest' 
+model = "mistral-small-latest"
 
 message_history = []
 session_timeout = 1800
 session_timer = None
 
-sql_sys_msg = {'role':'system', 'content':
-    """You are a professional developer and Data Engineer.
+sql_sys_msg = {
+    "role": "system",
+    "content": """You are a professional developer and Data Engineer.
     You can write correct and high-quality SQL queries based on a user message.
 
     At the moment, you are interacting with a Database that contains all the necessary information to respond to a user request.
@@ -52,9 +53,10 @@ sql_sys_msg = {'role':'system', 'content':
 
     If user query does not require any sql e.g. "привет" "как ты работаешь" then send first 5 rows of the table.
     If user asks for general info about the table/column you give general statistics using SQL aggregate functions (like COUNT, MIN, MAX, AVG, etc) or first 50 rows
-    You don't need to write any explanations and comments before and after the code, STRICTLY follow this rule:"""
-    }
+    You don't need to write any explanations and comments before and after the code, STRICTLY follow this rule:""",
+}  ### Хорошая идея с temp table, по поводу вообще one/two-shot штука довольно хорошо отработает на конкретных примерах, которые относятся к ним, а вот на остальных может посыпаться
 sql_sys_formated = False
+
 
 def reset_session_timer():
     global session_timer, message_history
@@ -62,6 +64,7 @@ def reset_session_timer():
         session_timer.cancel()
     session_timer = threading.Timer(session_timeout, end_session)
     session_timer.start()
+
 
 def end_session():
     global message_history
