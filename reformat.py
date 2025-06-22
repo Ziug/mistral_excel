@@ -69,7 +69,8 @@ def reformat(message: str, history: List[dict]) -> str:
     user_attachments = message.get("attachments", [])[0]
     
     new_prompt = rephrased
-    # print("REFORMATTED:", new_prompt)
+    print(f"\n=== Переформатированный запрос ===\n\n{new_prompt}")  
+
 
     # Обращение к SQL агенту, передаём переформатированный запрос юзера и данные о файле
     sql_res = sql_agent.generate_sql(
@@ -85,7 +86,6 @@ def reformat(message: str, history: List[dict]) -> str:
     
     # sql_res = sql_agent.generate_sql(response.json()["choices"][0]["message"]["content"].strip(), 
     #                        user_attachments["file_name"], user_attachments["file_content"])
-    
     
     if isinstance(sql_res, dict) and "excel_buffer" in sql_res:
         with open("result.xlsx", "wb") as f:

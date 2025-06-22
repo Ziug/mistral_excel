@@ -15,7 +15,7 @@ def extract_sql_blocks(text: str) -> List[str]:
         fallback_matches = re.findall(r"(?i)\b(?:SELECT|PRAGMA)\b\s+.*?;", text, re.DOTALL)
         cleaned = [b.strip().rstrip(";") + ";" for b in blocks + fallback_matches]
         
-        print('EXTRACTED')
+        # print('EXTRACTED')
         
         return cleaned
 
@@ -24,7 +24,7 @@ def parse_attachment(file_name: str, file_content: str) -> pd.DataFrame:
         ext = file_name.lower().split(".")[-1]
         content_bytes = file_content.encode("latin1")
         
-        print('PARSED')
+        # print('PARSED')
 
         # Excel файлы
         if ext in ["xlsx", "xls", 'xlsm', 'xlsb', 'odf', 'ods', 'odt']:
@@ -50,13 +50,14 @@ def generate_sql(message: str, file_name: str, file_content: str, context: str, 
     }
     
     # Проверка на то, была ли таблица преобразована в SQL
-    parse_attachment(file_name, file_content).to_sql(table_name, conn, index=False, if_exists='replace')
-    db.columns = parse_attachment(file_name, file_content).columns
-    db.df = parse_attachment(file_name, file_content)
-    db.is_sql = True
+    if not db.is_sql:
+        db.parsed_pd = parse_attachment(file_name, file_content)
+        db.columns = parse_attachment(file_name, file_content).columns
+        db.parsed_pd.to_sql(table_name, conn, index=False, if_exists='replace')
+        db.is_sql = True
     
     for col in db.columns:
-        db.col_uniques[col]=db.df[col].unique()[:10]
+        db.col_uniques[col]=db.parsed_pd[col].unique()[:10]
     
     if not session.sql_sys_formated:
         # Заполнение систеемного сообщения данными о таблице (название + столбцы)
@@ -82,6 +83,7 @@ def generate_sql(message: str, file_name: str, file_content: str, context: str, 
     
     # Получаем список SQL блоков (отдельных запросов)
     sql_blocks = extract_sql_blocks(response.json()["choices"][0]["message"]["content"].strip())
+    sql_blocks = sql_blocks[:len(sql_blocks)//2]
 
     # Берём подключение к БД
     con = conn
@@ -119,18 +121,14 @@ def generate_sql(message: str, file_name: str, file_content: str, context: str, 
         except Exception as e:
             sql_results += f"[ОШИБКА выполнения SQL]: {sql}\n{str(e)}\n"
 
-    print('SQL to results')
-    
-    # print(need_excel)
-    
+    # print('SQL to results')  
+    print(f"\n=== SQL запрос ===\n\n{response.json()["choices"][0]["message"]["content"].strip()}")  
     
     if need_excel:
         combined_df.to_excel(excel_buffer, index=False)
         excel_buffer.seek(0)  # возвращаем указатель в начало
-        
-        
-        if need_excel:
-            sql_results = 'без результатов так как был запрос на создание экселя'
+    
+        sql_results = 'без результатов так как был запрос на создание экселя'
         
         # Передаём SQL запросы и их результаты первому агенту для понимания контекста результатов + excel_buffer для создания excel документа
         return {
@@ -142,7 +140,7 @@ def generate_sql(message: str, file_name: str, file_content: str, context: str, 
     # Передаём SQL запросы и их результаты первому агенту для понимания контекста результатов
     return {
         "role": "user",
-        "content": f"SQL queries: {response.json()['choices'][0]['message']['content'].strip()}\nSQL query results: {sql_results}"
+        "content": f"SQL queries: {response.json()['choices'][0]['message']['content'].strip()}\nSQL query results: {sql_results[:500]}"
     }
 
 if __name__ == "__main__":
